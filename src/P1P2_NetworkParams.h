@@ -59,8 +59,8 @@
 // MQTT
 #define MQTT_SERVER "10.192.160.9"       // required
 #define MQTT_PORT "1883"                 // string, defaults to 1883 if wrongly formatted
-#define MQTT_USER "mqtt"                 // optional, defaults to none if undefined
-#define MQTT_PASSWORD "fil95klo"             // optional, defaults to none if undefined
+#define MQTT_USER ""                 // optional, defaults to none if undefined
+#define MQTT_PASSWORD ""             // optional, defaults to none if undefined
 #define MQTT_SERVER_LEN (15+1)
 #define MQTT_USER_LEN (80+1)
 #define MQTT_PASSWORD_LEN (80+1)

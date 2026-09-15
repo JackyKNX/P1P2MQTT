@@ -261,7 +261,7 @@ static String formatBuffer(
 
 
             break;
-       } 
+       }
 
 
         case SERIAL_BOTH:
@@ -292,7 +292,7 @@ static String formatBuffer(
             {
                 ascii += (char)b;
             }
- 
+
 
            else
            {
@@ -310,7 +310,7 @@ static String formatBuffer(
             sprintf(t,"%02X ",b);
 
             hex += t;
-        
+
             break;
 
         }
@@ -327,7 +327,7 @@ static String formatBuffer(
             {
                 s += ascii;
                 s += '\n';
-        
+
                 s += hex;
                 s += '\n';
             }

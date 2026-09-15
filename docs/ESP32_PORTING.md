@@ -2674,4 +2674,3 @@ pio run -e kamod
 
 Both targets share the same application source and differ only where
 hardware-specific configuration is selected with `HW_KAMOD`.
-

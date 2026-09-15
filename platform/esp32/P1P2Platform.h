@@ -55,4 +55,4 @@ namespace P1P2Platform
     // Critical sections
     uint32_t enterCritical();
     void exitCritical(uint32_t state);
-}	
+}

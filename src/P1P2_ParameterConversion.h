@@ -914,11 +914,11 @@ byte  createButtonsSwitches2(void) {
 /*
     switch (controlId) {
       case 0xF0 : HADEVICE_AVAILABILITY("S/2/Main_LCD_Light", 0, 1); // Only available if main LCD is off
-                  break; 
+                  break;
       case 0xF1 : HADEVICE_AVAILABILITY("S/4/Main_LCD_Light", 0, 1); // Only available if main LCD is off
-                  break; 
+                  break;
       case 0xFF : HADEVICE_AVAILABILITY("S/6/Main_LCD_Light", 0, 1); // Only available if main LCD is off
-                  break; 
+                  break;
     }
 */
     if (!publishHomeAssistantConfig(deviceSubName, haDevice, haEntity, haEntityCategory, haPrecision, haButtonDeviceClass, useSrc)) return 0;
@@ -936,11 +936,11 @@ byte  createButtonsSwitches2(void) {
 /*
     switch (controlId) {
       case 0xF0 : HADEVICE_AVAILABILITY("S/2/Main_Installer", 0, 1); // Only available if main not in installer mode
-                  break; 
+                  break;
       case 0xF1 : HADEVICE_AVAILABILITY("S/4/Main_Installer", 0, 1); // Only available if main not in installer mode
-                  break; 
+                  break;
       case 0xFF : HADEVICE_AVAILABILITY("S/6/Main_Installer", 0, 1); // Only available if main not in installer mode
-                  break; 
+                  break;
     }
 */
     if (!publishHomeAssistantConfig(deviceSubName, haDevice, haEntity, haEntityCategory, haPrecision, haButtonDeviceClass, useSrc)) return 0;
@@ -4073,7 +4073,7 @@ byte bytesbits2keyvalue(byte packetSrc, byte packetDst, byte packetType, byte pa
         case    8 : SUBDEVICE("_LWT");                               HACONFIG; HATEMP1;                 QOS_CLIMATE;        KEY1_PUB_CONFIG_CHECK_ENTITY("Deviation_Heating");                         VALUE_s4abs1c;
         case    9 : SUBDEVICE("_LWT");                               HACONFIG; HATEMP1;                 QOS_CLIMATE;        KEY1_PUB_CONFIG_CHECK_ENTITY("Deviation_Cooling");                         VALUE_s4abs1c; // guess
         case   10 :
-                    SUBDEVICE("_LWT2");   
+                    SUBDEVICE("_LWT2");
                     HACONFIG;
                     HATEMP1;
                     QOS_CLIMATE;
@@ -4084,7 +4084,7 @@ byte bytesbits2keyvalue(byte packetSrc, byte packetDst, byte packetType, byte pa
                     }
                     VALUE_s4abs1c;
         case   11 :
-                    SUBDEVICE("_LWT2");   
+                    SUBDEVICE("_LWT2");
                     HACONFIG;
                     HATEMP1;
                     QOS_CLIMATE;
@@ -4119,7 +4119,7 @@ byte bytesbits2keyvalue(byte packetSrc, byte packetDst, byte packetType, byte pa
         case   17 : return 0;
         case   18 : /* if (payloadByte || payload[payloadIndex - 1]) */
                     HACONFIG;
-                    SUBDEVICE("_LWT2");   
+                    SUBDEVICE("_LWT2");
                     HATEMP1;
                     if (KEEPCONFIG || EE.haSetup || M.R.numberOfLWTzonesX10) {
                       KEY2_PUB_CONFIG_CHECK_ENTITY("LWT_Setpoint_Add");
@@ -4648,7 +4648,7 @@ byte bytesbits2keyvalue(byte packetSrc, byte packetDst, byte packetType, byte pa
                   QOS_CLIMATE;
                   if (pubHa) {
                     HATEMP1;
-                    SUBDEVICE("_LWT2");   
+                    SUBDEVICE("_LWT2");
                     HADEVICE_CLIMATE;
                     if (KEEPCONFIG || M.R.numberOfLWTzonesX10) {
                       if (1 || EE.haSetup || !M.R.controlRTX10) { // RT mode (both for 1 RT-ext and 2 RT, not for 0 LWT) // 1|| as these seem to work even in RT mode
@@ -4705,7 +4705,7 @@ byte bytesbits2keyvalue(byte packetSrc, byte packetDst, byte packetType, byte pa
                   QOS_CLIMATE;
                   if (pubHa) {
                     HATEMP1;
-                    SUBDEVICE("_LWT2");   
+                    SUBDEVICE("_LWT2");
                     HADEVICE_CLIMATE;
                     if (KEEPCONFIG || EE.haSetup || (!M.R.heatingOnlyX10 && M.R.numberOfLWTzonesX10)) {
                       //if (1 || !M.R.controlRTX10) { // RT mode (both for 1 RT-ext and 2 RT, not for 0 LWT) // 1|| as these seem to work even in RT mode
