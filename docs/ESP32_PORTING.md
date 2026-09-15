@@ -2518,3 +2518,160 @@ manual re-scan), and a historical switch-state mapping quirk (`true`/
 switches already use the correct `stat_off`/`stat_on` numeric convention.
 Still open: an actual live test against a running openHAB instance.
 
+## 39. Supported ESP32 Ethernet hardware
+
+The ESP32 bridge currently supports two Ethernet/PoE hardware targets.
+
+### M5Stack PoESP32 Unit (U138)
+
+The original and currently live hardware target.
+
+```text
+ATmega UART2:
+    RX = GPIO17
+    TX = GPIO16
+
+Ethernet PHY:
+    IP101
+    PHY address = 1
+    MDC = GPIO23
+    MDIO = GPIO18
+    PHY power = GPIO5
+    RMII clock = GPIO0 input
+```
+
+The M5Stack U138 is the reference platform for the currently validated
+full-duplex ESP32 <-> ATmega bridge.
+
+### KAmod ESP32 ETH+POE
+
+A second hardware target is now supported through the PlatformIO
+`kamod` environment.
+
+```text
+ATmega UART2:
+    RX = GPIO17
+    TX = GPIO4
+
+Ethernet PHY:
+    LAN8742 / LAN8720-compatible
+    PHY address = 0
+    MDC = GPIO23
+    MDIO = GPIO18
+    PHY power = not required
+    PHY reset = GPIO16
+    RMII clock = GPIO0 input
+```
+
+The KAmod-specific configuration is selected with:
+
+```text
+-DHW_KAMOD
+```
+
+and can be built with:
+
+```bash
+pio run -e kamod
+```
+
+The default `poesp32` environment remains the M5Stack U138 target:
+
+```bash
+pio run -e poesp32
+```
+
+The hardware-specific differences are isolated in the configuration layer;
+the ATmega serial protocol, MQTT/HA processing and bridge logic remain
+shared.
+
+### Hardware compatibility summary
+
+| Feature | M5Stack PoESP32 U138 | KAmod ESP32 ETH+POE |
+|---|---|---|
+| ESP32 | ESP32-WROOM-32U | ESP32-WROOM-32 |
+| Ethernet PHY | IP101 | LAN8742 / LAN8720-compatible |
+| PHY address | 1 | 0 |
+| PHY power | GPIO5 | Not required |
+| MDC | GPIO23 | GPIO23 |
+| MDIO | GPIO18 | GPIO18 |
+| PHY reset | None | GPIO16 |
+| ATmega UART RX | GPIO17 | GPIO17 |
+| ATmega UART TX | GPIO16 | GPIO4 |
+| UART speed | 250000 | 250000 |
+| RMII clock | GPIO0 input | GPIO0 input |
+| PlatformIO environment | `poesp32` | `kamod` |
+
+The two targets use the same ESP32 bridge application. Hardware-specific
+Ethernet PHY, PHY reset, power and ATmega UART pin assignments are selected
+at compile time.
+
+## 40. Current development status — 2026-09-15
+
+### Hardware support
+
+- [x] M5Stack PoESP32 Unit (U138) support
+- [x] KAmod ESP32 ETH+POE support
+- [x] Separate PlatformIO `poesp32` and `kamod` environments
+- [x] M5Stack and KAmod UART pin mapping isolated from common bridge logic
+- [x] M5Stack IP101 Ethernet configuration
+- [x] KAmod LAN8742/LAN8720-compatible Ethernet configuration
+- [x] KAmod PHY reset handling on GPIO16
+- [x] `poesp32` build succeeds
+- [x] `kamod` build succeeds
+
+### Current firmware status
+
+The M5Stack U138 implementation has been validated on the real,
+physically-wired P1/P2 installation.
+
+Confirmed:
+
+- [x] Ethernet and DHCP
+- [x] Web UI / Web Serial
+- [x] UART2 RX at 250000 baud
+- [x] Full-duplex UART2 link
+- [x] MQTT connection/reconnect
+- [x] MQTT configuration persistence
+- [x] MQTT state publishing
+- [x] MQTT -> ESP32 -> ATmega command forwarding
+- [x] Controlled DHW ON/OFF write
+- [x] ATmega software reset through the ESP32 command path
+- [x] HA discovery for the implemented entities
+- [x] Arnold-compatible pseudo-packet processing fixes
+- [x] `R P` parser compatibility
+- [x] ESP32 system log
+- [x] Firmware version `1.0.1`
+
+### Remaining compatibility work
+
+- [ ] Complete Arnold MQTT topic-tree parity where required
+- [ ] Complete Arnold E-series parameter/context parity
+- [ ] Complete ESP-local `D#` / `L#` command compatibility
+- [ ] Full write-command coverage
+- [ ] Full openHAB live validation
+- [ ] Long-duration serial/network stress testing
+- [ ] Final OTA recovery/rollback validation
+- [ ] Final production security hardening
+
+The KAmod target has passed compilation. Physical runtime validation of
+the KAmod hardware is a separate hardware-validation task and should not
+be inferred from the successful M5Stack U138 runtime tests.
+
+## 41. Build commands
+
+Build the M5Stack PoESP32 target:
+
+```bash
+pio run -e poesp32
+```
+
+Build the KAmod ESP32 ETH+POE target:
+
+```bash
+pio run -e kamod
+```
+
+Both targets share the same application source and differ only where
+hardware-specific configuration is selected with `HW_KAMOD`.
+
