@@ -195,16 +195,33 @@ void setup()
 
     WiFi.onEvent(WiFiEvent);
 
-    logPrintf("Starting Ethernet...");
+logPrintf("Starting Ethernet...");
 
-    ETH.begin(
-        PHY_ADDR,
-        ETH_POWER_PIN,
-        ETH_MDC_PIN,
-        ETH_MDIO_PIN,
-        ETH_PHY_IP101,
-        ETH_CLOCK_GPIO0_IN
-    );
+#ifdef HW_KAMOD
+
+// KAmod ESP32 ETH+POE:
+// GPIO16 is connected to LAN8742 RESET.
+pinMode(ETH_PHY_RESET_PIN, OUTPUT);
+
+digitalWrite(ETH_PHY_RESET_PIN, LOW);
+delay(20);
+
+digitalWrite(ETH_PHY_RESET_PIN, HIGH);
+delay(200);
+
+logPrintf("KAmod LAN8742 reset released.");
+
+#endif
+
+ETH.begin(
+    PHY_ADDR,
+    ETH_POWER_PIN,
+    ETH_MDC_PIN,
+    ETH_MDIO_PIN,
+    P1P2_ETH_PHY_TYPE,
+    ETH_CLOCK_GPIO0_IN
+);
+
 
     logPrintf("Waiting for DHCP...");
 

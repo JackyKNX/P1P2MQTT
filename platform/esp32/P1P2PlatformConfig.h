@@ -13,7 +13,7 @@
  * UART2:
  *   external ATmega connector
  *   RX = GPIO17
- *   TX = GPIO16
+ *   TX = GPIO16 on M5Stack / GPIO4 on KAmod
  *
  * Current implementation:
  *   UART0 = receive/sniffer only
@@ -25,7 +25,12 @@
 #define UART0_RX_PIN 3
 #define UART0_TX_PIN 1
 
+#ifdef HW_KAMOD
+#define UART2_RX_PIN 17
+#define UART2_TX_PIN 4
+#else
 #define UART2_RX_PIN 17
 #define UART2_TX_PIN 16
+#endif
 
 #define UART_BAUD 250000
