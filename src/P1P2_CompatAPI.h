@@ -39,3 +39,24 @@ void P1P2Compat_mqttWriteBroadcastTopic(
 void P1P2Compat_restartEsp();
 
 const char* P1P2Compat_mqttWriteTopic();
+
+// -----------------------------------------------------------------------------
+// MQTT configuration
+// -----------------------------------------------------------------------------
+
+const char* P1P2Compat_mqttServer();
+uint16_t P1P2Compat_mqttPort();
+const char* P1P2Compat_mqttUser();
+const char* P1P2Compat_mqttPassword();
+const char* P1P2Compat_mqttClientName();
+
+bool P1P2Compat_mqttEnabled();
+
+void P1P2Compat_setMqttServer(const char* value);
+void P1P2Compat_setMqttPort(uint16_t value);
+void P1P2Compat_setMqttUser(const char* value);
+void P1P2Compat_setMqttPassword(const char* value);
+void P1P2Compat_setMqttClientName(const char* value);
+void P1P2Compat_setMqttEnabled(bool value);
+
+void P1P2Compat_saveSettings();

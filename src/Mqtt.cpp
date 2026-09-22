@@ -30,6 +30,8 @@ namespace
 {
     AsyncMqttClient mqtt;
 
+    char mqttClientId[MQTT_CLIENTNAME_LEN + 8];
+
     bool mqttStarted = false;
     bool mqttConnected = false;
     bool mqttEnabled = true;
@@ -138,16 +140,14 @@ void onMqttDisconnect(
             P1P2Compat_mqttPort()
         );
 
-        char clientId[MQTT_CLIENTNAME_LEN + 8];
+snprintf(
+    mqttClientId,
+    sizeof(mqttClientId),
+    "%s_ESP32",
+    P1P2Compat_mqttClientName()
+);
 
-        snprintf(
-            clientId,
-            sizeof(clientId),
-            "%s_ESP32",
-            P1P2Compat_mqttClientName()
-        );
-
-        mqtt.setClientId(clientId);
+mqtt.setClientId(mqttClientId);
 
         mqtt.setKeepAlive(15);
 
@@ -187,17 +187,11 @@ void onMqttDisconnect(
         lastConnectAttemptMs = millis();
         mqttConnectAttempts++;
 
-        // Empirically, a bare mqtt.connect() here sometimes never
-        // succeeds after a fresh boot/restart -- even with the network
-        // confirmed up -- while an explicit disconnect() + full
-        // reconfigure (server/client id/will/credentials) right before
-        // connect() reliably works (this is exactly what the manual
-        // "Save & Reconnect" button does). The disconnect() matters:
-        // it resets whatever internal state a previous stuck/failed
-        // attempt left behind. Doing this every attempt is cheap (no
-        // real network I/O besides the connect itself) and removes the
-        // need to ever click that button by hand.
-        mqtt.disconnect();
+
+    // Reconfigure the MQTT connection before every automatic
+    // connection attempt. Do NOT call mqtt.disconnect() here:
+    // the client is already disconnected at this point and
+    // disconnect() is asynchronous.
 
         configureConnection();
 
@@ -420,16 +414,15 @@ bool reconnect()
         P1P2Compat_mqttPort()
     );
 
-    char clientId[MQTT_CLIENTNAME_LEN + 8];
+snprintf(
+    mqttClientId,
+    sizeof(mqttClientId),
+    "%s_ESP32",
+    P1P2Compat_mqttClientName()
+);
 
-    snprintf(
-        clientId,
-        sizeof(clientId),
-        "%s_ESP32",
-        P1P2Compat_mqttClientName()
-    );
 
-    mqtt.setClientId(clientId);
+    mqtt.setClientId(mqttClientId);
 
     mqtt.setKeepAlive(15);
 

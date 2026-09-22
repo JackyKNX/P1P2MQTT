@@ -3,7 +3,7 @@
 //
 // Firmware
 //
-#define FW_VERSION "1.0.3"
+#define FW_VERSION "1.1.1"
 #define FW_AUTHOR  "JackyKNX"
 
 //

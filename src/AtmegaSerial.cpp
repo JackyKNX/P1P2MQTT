@@ -3,38 +3,71 @@
 #include "WebSerial.h"
 
 static HardwareSerial atmegaSerial(2);
+static uint32_t rxByteCount = 0;
+static uint32_t txByteCount = 0;
+static uint32_t lastRxTime = 0;
+static uint32_t lastTxTime = 0;
 
 namespace
 {
 
+#ifdef HW_KAMOD
+constexpr uint8_t UART_ACTIVITY_LED = 2;
+constexpr uint32_t UART_ACTIVITY_HOLD_MS = 80;
+
+bool uartLedActive = false;
+uint32_t uartLedOffAt = 0;
+
+void uartActivity()
+{
+    digitalWrite(UART_ACTIVITY_LED, HIGH);
+    uartLedOffAt = millis() + UART_ACTIVITY_HOLD_MS;
+    uartLedActive = true;
+}
+#endif
+
 void monitorRX(uint8_t byte)
 {
+    rxByteCount++;
+    lastRxTime = millis();
+
+#ifdef HW_KAMOD
+    uartActivity();
+#endif
+
     webSerialWriteUART2(byte);
 }
 
 void monitorTX(const uint8_t *data, size_t length)
 {
+    txByteCount += length;
+    lastTxTime = millis();
+
+#ifdef HW_KAMOD
+    uartActivity();
+#endif
+
     webSerialWriteUART2((const uint8_t *)"\n[TX] ", 6);
     webSerialWriteUART2(data, length);
 
-    // Repurposed: this buffer/endpoint used to carry raw UART0 bytes,
-    // but UART0 RX is now physically disconnected from the ATmega (see
-    // Config.h / README). Reusing its existing ring buffer + web panel
-    // slot to show a dedicated, TX-only view of UART2 instead -- easier
-    // to spot outgoing commands than scrolling through the combined
-    // RX+TX stream in the UART2 panel below it.
     webSerialWriteUART0((const uint8_t *)"[TX] ", 5);
     webSerialWriteUART0(data, length);
     webSerialWriteUART0((const uint8_t *)"\n", 1);
 }
 
-}
+} // namespace
+
 
 namespace AtmegaSerial
 {
 
 void begin()
 {
+#ifdef HW_KAMOD
+    pinMode(UART_ACTIVITY_LED, OUTPUT);
+    digitalWrite(UART_ACTIVITY_LED, LOW);
+#endif
+
     atmegaSerial.begin(
         ATMEGA_UART_BAUD,
         SERIAL_8N1,
@@ -57,9 +90,44 @@ void begin()
     Serial.println(ATMEGA_UART_BAUD);
 }
 
+uint32_t rxBytes()
+{
+    return rxByteCount;
+}
+
+uint32_t txBytes()
+{
+    return txByteCount;
+}
+
+uint32_t lastRxMillis()
+{
+    return lastRxTime;
+}
+
+uint32_t lastTxMillis()
+{
+    return lastTxTime;
+}
+
+void resetStats()
+{
+    rxByteCount = 0;
+    txByteCount = 0;
+    lastRxTime = 0;
+    lastTxTime = 0;
+}
+
 void loop()
 {
-    // UART transport is consumed by available()/read().
+#ifdef HW_KAMOD
+    if (uartLedActive &&
+        (int32_t)(millis() - uartLedOffAt) >= 0)
+    {
+        digitalWrite(UART_ACTIVITY_LED, LOW);
+        uartLedActive = false;
+    }
+#endif
 }
 
 bool available()
@@ -121,4 +189,4 @@ void sendCommand(const char *command)
     write((const uint8_t *)buffer, (size_t)n);
 }
 
-}
+} // namespace AtmegaSerial

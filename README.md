@@ -2,9 +2,14 @@
 
 This fork also includes an ESP32 Ethernet + PoE implementation of P1P2MQTT.
 
-The ESP32 implementation provides a modern wired Ethernet/PoE network platform
-while maintaining compatibility with the existing P1P2MQTT architecture,
-P1/P2 communication and Home Assistant integration.
+The ESP32 implementation provides a modern wired Ethernet/PoE platform while
+maintaining compatibility with the existing P1P2MQTT architecture,
+P1/P2 communication and MQTT/Home Assistant integration.
+
+The KAmod ESP32 ETH+PoE implementation additionally provides an optional
+2.4-inch ILI9341 TFT with XPT2046 touch interface for local status,
+diagnostics, P1P2 testing and configuration. The display uses the ESP32 HSPI
+interface and is enabled only for the `kamod` build.
 
 See the [ESP32 Ethernet + PoE documentation](docs/ESP32_ETHERNET_POE.md) for
 architecture, hardware, configuration, build instructions and implementation

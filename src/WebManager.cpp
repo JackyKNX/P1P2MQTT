@@ -8,7 +8,13 @@
 #include "Config.h"
 #include "WebSerial.h"
 #include "AtmegaProtocol.h"
+#include "AtmegaSerial.h"
+#include "P1P2Test.h"
 #include "Mqtt.h"
+
+#ifdef HW_KAMOD
+#include "KamodHealth.h"
+#endif
 
 extern uint32_t compatGetOutputMode();
 extern uint8_t compatGetOutputFilter();
@@ -470,6 +476,22 @@ String htmlPage()
     s += "</table>";
     s += "</div>";
 
+    // P1P2 UART Test
+    s += "<div class='card'>";
+    s += "<h2>P1P2 UART Test</h2>";
+    s += "<table>";
+    s += "<tr><td>RX bytes</td><td id='p1p2RxBytes'>-</td></tr>";
+    s += "<tr><td>TX bytes</td><td id='p1p2TxBytes'>-</td></tr>";
+    s += "<tr><td>RX activity</td><td id='p1p2RxAge'>-</td></tr>";
+    s += "<tr><td>TX activity</td><td id='p1p2TxAge'>-</td></tr>";
+    s += "<tr><td>UART</td><td id='p1p2Uart'>-</td></tr>";
+    s += "<tr><td>Parser buffer</td><td id='p1p2Buffer'>-</td></tr>";
+    s += "</table>";
+    s += "<button onclick='runP1P2Test()' style='padding:8px 16px;cursor:pointer;margin-right:8px'>Run P1P2 Test</button>";
+    s += "<button onclick='resetP1P2Stats()' style='padding:8px 16px;cursor:pointer'>Reset counters</button>";
+    s += "<div id='p1p2TestResult' style='margin-top:10px;font-weight:bold'>Test: NOT RUN</div>";
+    s += "</div>";
+
     // Last MQTT activity
     s += "<div class='card'>";
     s += "<h2>Last MQTT Activity</h2>";
@@ -572,6 +594,62 @@ String htmlPage()
     s += " }";
     s += "}";
 
+    s += "function loadP1P2Test(){";
+    s += " fetch('/api/p1p2/test',{cache:'no-store'})";
+    s += " .then(function(r){";
+    s += "   if(!r.ok) throw new Error('HTTP '+r.status);";
+    s += "   return r.json();";
+    s += " })";
+    s += " .then(function(j){";
+    s += "   el('p1p2RxBytes').textContent=esc(j.rxBytes);";
+    s += "   el('p1p2TxBytes').textContent=esc(j.txBytes);";
+    s += "   el('p1p2RxAge').textContent=formatAge(j.lastRxAgeMs);";
+    s += "   el('p1p2TxAge').textContent=formatAge(j.lastTxAgeMs);";
+    s += "   el('p1p2Buffer').textContent=esc(j.bufferLength)+' bytes';";
+    s += "   el('p1p2Uart').innerHTML=j.uartActive";
+    s += "      ? \"<span class='pill ok'>ACTIVE</span>\"";
+    s += "      : \"<span class='pill neutral'>IDLE</span>\";";
+    s += "   if(j.testResult==='PASS')";
+    s += "     el('p1p2TestResult').innerHTML=\"Test: <span class='pill ok'>PASS</span> TX +\"+j.testTxDelta+\" B, RX +\"+j.testRxDelta+\" B, \"+j.testElapsedMs+\" ms\";";
+    s += "   else if(j.testResult==='FAIL')";
+    s += "     el('p1p2TestResult').innerHTML=\"Test: <span class='pill bad'>FAIL</span>\";";
+    s += " })";
+    s += " .catch(function(){";
+    s += "   el('p1p2Uart').innerHTML=\"<span class='pill bad'>ERROR</span>\";";
+    s += " });";
+    s += "}";
+
+    s += "function runP1P2Test(){";
+    s += " el('p1p2TestResult').textContent='Test: RUNNING...';";
+    s += " fetch('/api/p1p2/test/run',{method:'POST'})";
+    s += " .then(function(r){";
+    s += "   return r.json().then(function(j){";
+    s += "     if(!r.ok) throw new Error(j.result||'TEST FAILED');";
+    s += "     return j;";
+    s += "   });";
+    s += " })";
+    s += " .then(function(j){";
+    s += "   el('p1p2TestResult').innerHTML=";
+    s += "     \"Test: <span class='pill ok'>PASS</span> TX +\"+j.txDelta+";
+    s += "     \" B, RX +\"+j.rxDelta+\" B, \"+j.elapsedMs+\" ms\";";
+    s += "   loadP1P2Test();";
+    s += " })";
+    s += " .catch(function(e){";
+    s += "   el('p1p2TestResult').innerHTML=";
+    s += "     \"Test: <span class='pill bad'>FAIL</span> \"+e.message;";
+    s += "   loadP1P2Test();";
+    s += " });";
+    s += "}";
+
+    s += "function resetP1P2Stats(){";
+    s += " fetch('/api/p1p2/reset',{method:'POST'})";
+    s += " .then(function(r){";
+    s += "   if(!r.ok) throw new Error('HTTP '+r.status);";
+    s += " })";
+    s += " .then(function(){loadP1P2Test();})";
+    s += " .catch(function(e){console.error(e);});";
+    s += "}";
+
     s += "function loadStatus(){";
     s += " if(refreshBusy) return;";
     s += " refreshBusy=true;";
@@ -583,6 +661,7 @@ String htmlPage()
     s += " .then(function(j){";
     s += "   var m=j.mqtt||{};";
     s += "   var sys=j.system||{};";
+    s += "   loadP1P2Test();";
 
     // ESP32
     s += "   el('firmware').textContent=esc(j.firmware);";
@@ -1066,6 +1145,126 @@ void handleMqttSave()
 }
 
 
+#ifdef HW_KAMOD
+void handleDiagnostics()
+{
+    String json;
+    json.reserve(1800);
+
+    json += "{";
+
+    // System
+    json += "\"system\":{";
+
+    json += "\"uptime\":";
+    json += KamodHealth::uptimeSeconds();
+
+    json += ",\"freeHeap\":";
+    json += KamodHealth::freeHeap();
+
+    json += ",\"minFreeHeap\":";
+    json += KamodHealth::minFreeHeap();
+
+    json += ",\"resetReason\":\"";
+    json += KamodHealth::resetReason();
+    json += "\"";
+
+    json += "},";
+
+    // Ethernet
+    json += "\"ethernet\":{";
+
+    json += "\"link\":";
+    json += KamodHealth::ethernetOK() ? "true" : "false";
+
+    json += ",\"ip\":\"";
+    json += KamodHealth::ip();
+    json += "\"";
+
+    json += ",\"mac\":\"";
+    json += KamodHealth::mac();
+    json += "\"";
+
+    json += ",\"speed\":\"";
+    json += KamodHealth::ethernetSpeed();
+    json += "\"";
+
+    json += "},";
+
+    // MQTT
+    json += "\"mqtt\":{";
+
+    json += "\"enabled\":";
+    json += Esp32Mqtt::enabled() ? "true" : "false";
+
+    json += ",\"connected\":";
+    json += KamodHealth::mqttOK() ? "true" : "false";
+
+    json += ",\"connectAttempts\":";
+    json += KamodHealth::mqttConnectAttempts();
+
+    json += ",\"publishCalls\":";
+    json += KamodHealth::mqttPublishCalls();
+
+    json += ",\"publishSuccess\":";
+    json += KamodHealth::mqttPublishSuccess();
+
+    json += ",\"publishFailed\":";
+    json += KamodHealth::mqttPublishFailed();
+
+    json += ",\"publishQueued\":";
+    json += KamodHealth::mqttPublishQueued();
+
+    json += ",\"publishAcknowledged\":";
+    json += KamodHealth::mqttPublishAcknowledged();
+
+    json += ",\"publishRejected\":";
+    json += KamodHealth::mqttPublishRejected();
+
+    json += ",\"lastPublishResult\":";
+    json += KamodHealth::mqttLastPublishResult()
+        ? "true"
+        : "false";
+
+    json += "},";
+
+    // P1/P2 / UART2
+    json += "\"p1p2\":{";
+
+    json += "\"uart2Bytes\":";
+    json += KamodHealth::uart2Bytes();
+
+    json += ",\"uart2BufferUsed\":";
+    json += KamodHealth::uart2BufferUsed();
+
+    json += ",\"uart2Active\":";
+    json += KamodHealth::uart2Active()
+        ? "true"
+        : "false";
+
+    json += "},";
+
+    // Local log
+    json += "\"log\":{";
+
+    json += "\"bytes\":";
+    json += KamodHealth::logBytes();
+
+    json += ",\"used\":";
+    json += KamodHealth::logUsed();
+
+    json += "}";
+
+    json += "}";
+
+    server.send(
+        200,
+        "application/json",
+        json
+    );
+}
+#endif
+
 void handleStatus()
 {
     const uint32_t outputMode = compatGetOutputMode();
@@ -1338,8 +1537,108 @@ void handleSerialSend()
 }
 
 
+void handleP1P2Test()
+{
+    const uint32_t now = millis();
+
+    const uint32_t rx = AtmegaSerial::rxBytes();
+    const uint32_t tx = AtmegaSerial::txBytes();
+    const uint32_t lastRx = AtmegaSerial::lastRxMillis();
+    const uint32_t lastTx = AtmegaSerial::lastTxMillis();
+
+    String json;
+    json.reserve(900);
+
+    json += "{";
+
+    json += "\"rxBytes\":";
+    json += rx;
+
+    json += ",\"txBytes\":";
+    json += tx;
+
+    json += ",\"lastRxAgeMs\":";
+    json += (lastRx == 0) ? -1 : (int32_t)(now - lastRx);
+
+    json += ",\"lastTxAgeMs\":";
+    json += (lastTx == 0) ? -1 : (int32_t)(now - lastTx);
+
+    json += ",\"uartActive\":";
+    json += ((lastRx != 0 && (now - lastRx) < 3000) ||
+             (lastTx != 0 && (now - lastTx) < 3000))
+        ? "true"
+        : "false";
+
+    json += ",\"bufferLength\":";
+    json += AtmegaProtocol::bufferLength();
+
+    json += ",\"testRunning\":";
+    json += P1P2Test::running() ? "true" : "false";
+
+    json += ",\"testPassed\":";
+    json += P1P2Test::passed() ? "true" : "false";
+
+    json += ",\"testResult\":\"";
+    json += P1P2Test::resultText();
+    json += "\"";
+
+    json += ",\"testElapsedMs\":";
+    json += P1P2Test::elapsedMillis();
+
+    json += ",\"testTxDelta\":";
+    json += P1P2Test::txDelta();
+
+    json += ",\"testRxDelta\":";
+    json += P1P2Test::rxDelta();
+
+    json += "}";
+
+    server.send(200, "application/json", json);
+}
+
+void handleP1P2TestRun()
+{
+    const bool passed = P1P2Test::run();
+
+    String json;
+    json.reserve(300);
+
+    json += "{";
+    json += "\"passed\":";
+    json += passed ? "true" : "false";
+    json += ",\"result\":\"";
+    json += P1P2Test::resultText();
+    json += "\"";
+    json += ",\"elapsedMs\":";
+    json += P1P2Test::elapsedMillis();
+    json += ",\"txDelta\":";
+    json += P1P2Test::txDelta();
+    json += ",\"rxDelta\":";
+    json += P1P2Test::rxDelta();
+    json += "}";
+
+    server.send(
+        passed ? 200 : 500,
+        "application/json",
+        json
+    );
+}
+
+void handleP1P2Reset()
+{
+    AtmegaSerial::resetStats();
+
+    P1P2Test::begin();
+
+    server.send(200, "text/plain", "OK");
+}
+
+
 void handleRestart()
 {
+
+
+
     String s;
     s.reserve(300);
 
@@ -1580,8 +1879,17 @@ void webSetup()
               HTTP_POST,
               handleMqttSave);
 
-    server.on("/api/status", handleStatus);
-    server.on("/api/restart", HTTP_POST, handleRestart);
+server.on("/api/status", handleStatus);
+
+server.on("/api/p1p2/test", HTTP_GET, handleP1P2Test);
+server.on("/api/p1p2/test/run", HTTP_POST, handleP1P2TestRun);
+server.on("/api/p1p2/reset", HTTP_POST, handleP1P2Reset);
+
+#ifdef HW_KAMOD
+server.on("/api/diagnostics", HTTP_GET, handleDiagnostics);
+#endif
+
+server.on("/api/restart", HTTP_POST, handleRestart);
 
     server.on("/update", HTTP_GET, handleUpdatePage);
     server.on("/update", HTTP_POST, handleUpdateResult, handleUpdateUpload);

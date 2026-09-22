@@ -18,6 +18,11 @@
 
 #include "Mqtt.h"
 
+#ifdef HW_KAMOD
+#include "KamodDisplay.h"
+#include "KamodHealth.h"
+#endif
+
 
 bool eth_connected = false;
 
@@ -188,6 +193,11 @@ void setup()
 
     webSerialSetup();
 
+    #ifdef HW_KAMOD
+        KamodHealth::begin();
+        KamodDisplay::begin();
+    #endif
+
     logPrintf("======================================");
     logPrintf("        P1P2MQTT ESP32");
     logPrintf("Version : %s (%s)", FW_VERSION, FW_AUTHOR);
@@ -275,6 +285,11 @@ ETH.begin(
 
 void loop()
 {
+
+#ifdef HW_KAMOD
+    KamodDisplay::loop();
+#endif
+
 //
 // NETWORK / OTA FIRST
 //
@@ -294,6 +309,8 @@ serviceNetwork();
 //
 
 AtmegaProtocol::loop();
+
+AtmegaSerial::loop();
 
 serviceNetwork();
 
