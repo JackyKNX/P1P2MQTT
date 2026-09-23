@@ -15,6 +15,36 @@ See the [ESP32 Ethernet + PoE documentation](docs/ESP32_ETHERNET_POE.md) for
 architecture, hardware, configuration, build instructions and implementation
 details.
 
+### KAmod ESP32 ETH+PoE features
+
+The KAmod ESP32 ETH+PoE implementation currently provides:
+
+- **100 Mbps Ethernet** with DHCP support
+- **IEEE 802.3af PoE** power support
+- Bidirectional **P1/P2 communication** through the existing ATmega328P bridge
+- **MQTT** connectivity with automatic reconnect and Home Assistant MQTT discovery
+- Web-based configuration and diagnostics
+- **2.4-inch 320x240 ILI9341 TFT** display with **XPT2046 resistive touch**
+- Local TFT pages for:
+  - **HOME** – device overview and live status
+  - **HEALTH** – Ethernet, MQTT, P1/P2, memory and logging statistics
+  - **P1P2** – live UART counters, activity and parser status
+  - **LOG** – local scrolling WebSerial log
+  - **NET** – network diagnostics
+  - **INFO** – firmware and device information
+  - **SERVICE** – P1/P2, MQTT and network service tests
+  - **SYSTEM** – restart and factory reset
+  - **CONFIG** – MQTT configuration
+- Live refresh of dynamic **HOME and HEALTH** values without screen flicker
+- Local TFT log with automatic scrolling to the newest entries
+- P1/P2 UART activity indication using the KAmod onboard LED
+- P1/P2 transport-level diagnostic test
+- ESP32 system diagnostics including free heap, minimum heap, uptime, boot count and reset reason
+- WebSerial RAM log and UART diagnostics
+
+The TFT interface is enabled only for the `kamod` PlatformIO environment and does not
+change the functionality of the standard `poesp32` build.
+
 # Control your heat pump from Home Assistant with P1P2MQTT
 
 Since the v0.9.46 release, climate controls are automatically configured in Home Assistant. v0.9.46 (or later) comes with a lot of improvements and changes, please see the [v0.9.46 release notes](doc/v0.9.46-ReleaseNotes.md).

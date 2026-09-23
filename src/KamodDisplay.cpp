@@ -59,7 +59,7 @@ namespace
     constexpr uint16_t COLOR_HEADER   = ILI9341_BLUE;
     constexpr uint16_t COLOR_TEXT     = ILI9341_WHITE;
     constexpr uint16_t COLOR_LABEL    = ILI9341_LIGHTGREY;
-    constexpr uint16_t COLOR_OK       = ILI9341_GREEN;
+    constexpr uint16_t COLOR_OK       = 0x05E0; // softer green than ILI9341_GREEN
     constexpr uint16_t COLOR_ERROR    = ILI9341_RED;
     constexpr uint16_t COLOR_WARNING  = ILI9341_YELLOW;
     constexpr uint16_t COLOR_BUTTON   = ILI9341_DARKCYAN;
@@ -104,6 +104,10 @@ namespace
     constexpr int TOUCH_X_MAX = 3900;
     constexpr int TOUCH_Y_MIN = 200;
     constexpr int TOUCH_Y_MAX = 3900;
+
+    // Generate one event on touch-down. A held finger is ignored until
+    // the panel is released again.
+    bool touchWasDown = false;
 
     struct Button
     {
@@ -324,10 +328,10 @@ namespace
     // HOME
     // ============================================================
 
-    void drawHome()
+    void drawHomeValues()
     {
-        tft.fillScreen(COLOR_BG);
-        drawHeader("KAmod P1P2MQTT");
+        // Clear only the value area. Keep the header, labels and navigation stable.
+        tft.fillRect(100, 34, 215, 132, COLOR_BG);
 
         drawLabelValue(40,  "Firmware:", FW_VERSION);
         drawLabelValue(57,  "IP:",       KamodHealth::ip());
@@ -364,6 +368,14 @@ namespace
                 ? COLOR_OK
                 : COLOR_LABEL
         );
+    }
+
+    void drawHome()
+    {
+        tft.fillScreen(COLOR_BG);
+        drawHeader("KAmod P1P2MQTT");
+
+        drawHomeValues();
 
         drawNavigation();
     }
@@ -372,10 +384,10 @@ namespace
     // HEALTH
     // ============================================================
 
-    void drawHealth()
+    void drawHealthValues()
     {
-        tft.fillScreen(COLOR_BG);
-        drawHeader("HEALTH MONITOR");
+        // Clear only the dynamic content area.
+        tft.fillRect(0, 34, SCREEN_W, 132, COLOR_BG);
 
         drawTwoColumn(
             39, 4, 96,
@@ -478,13 +490,19 @@ namespace
         drawTwoColumn(
             158, 166, 255,
             "Last pub",
-            KamodHealth::mqttLastPublishResult()
-                ? "OK"
-                : "FAIL",
+            KamodHealth::mqttLastPublishResult() ? "OK" : "FAIL",
             KamodHealth::mqttLastPublishResult()
                 ? COLOR_OK
                 : COLOR_WARNING
         );
+    }
+
+    void drawHealth()
+    {
+        tft.fillScreen(COLOR_BG);
+        drawHeader("HEALTH MONITOR");
+
+        drawHealthValues();
 
         drawNavigation();
     }
@@ -705,7 +723,7 @@ namespace
     // LOG
     // ============================================================
 
-    void updateLog()
+    bool updateLog()
     {
         bool overflow = false;
 
@@ -713,7 +731,7 @@ namespace
             webSerialGetSinceLog(logCursor, overflow);
 
         if (incoming.length() == 0)
-            return;
+            return false;
 
         logView += incoming;
 
@@ -733,6 +751,7 @@ namespace
         }
 
         logScrollLines = 0;
+        return true;
     }
 
     void drawLog()
@@ -766,7 +785,7 @@ namespace
             start = end + 1;
         }
 
-        constexpr int visibleLines = 16;
+        constexpr int visibleLines = 10;
 
         int first =
             lineCount -
@@ -920,8 +939,19 @@ namespace
 
     bool readTouch(int16_t& screenX, int16_t& screenY)
     {
-        if (!touch.touched())
+        const bool down = touch.touched();
+
+        if (!down)
+        {
+            touchWasDown = false;
             return false;
+        }
+
+        // One event per physical touch. No blocking delay is required.
+        if (touchWasDown)
+            return false;
+
+        touchWasDown = true;
 
         TS_Point p = touch.getPoint();
 
@@ -967,7 +997,6 @@ namespace
         )
         {
             KamodMqttConfig::handleTouch(x, y);
-            delay(150);
             return;
         }
 
@@ -981,19 +1010,16 @@ namespace
             {
                 restartConfirm = false;
                 drawPage();
-                delay(200);
-                return;
+                    return;
             }
 
             if (pointInside(x, y, yes))
             {
                 logPrintf("[TFT] Restart requested");
-                delay(100);
-                P1P2Compat_restartEsp();
+                    P1P2Compat_restartEsp();
                 return;
             }
 
-            delay(100);
             return;
         }
 
@@ -1007,8 +1033,7 @@ namespace
             {
                 factoryResetConfirm = false;
                 drawPage();
-                delay(200);
-                return;
+                    return;
             }
 
             if (pointInside(x, y, yes))
@@ -1026,7 +1051,6 @@ namespace
                 return;
             }
 
-            delay(100);
             return;
         }
 
@@ -1049,7 +1073,6 @@ namespace
                 logPrintf("[TFT] Page: %s", pageName(currentPage));
 
             drawPage();
-            delay(250);
             return;
         }
 
@@ -1057,7 +1080,6 @@ namespace
         if (currentPage == PAGE_CONFIG)
         {
             KamodMqttConfig::handleTouch(x, y);
-            delay(180);
             return;
         }
 
@@ -1075,8 +1097,7 @@ namespace
                     logScrollLines++;
 
                 drawPage();
-                delay(180);
-                return;
+                    return;
             }
 
             if (pointInside(x, y, down))
@@ -1085,8 +1106,7 @@ namespace
                     logScrollLines--;
 
                 drawPage();
-                delay(180);
-                return;
+                    return;
             }
 
             if (pointInside(x, y, clear))
@@ -1102,16 +1122,14 @@ namespace
                 logCursor = webSerialTotalWrittenLog();
 
                 drawPage();
-                delay(180);
-                return;
+                    return;
             }
 
             if (pointInside(x, y, latest))
             {
                 logScrollLines = 0;
                 drawPage();
-                delay(180);
-                return;
+                    return;
             }
         }
 
@@ -1139,8 +1157,7 @@ namespace
                 );
 
                 drawPage();
-                delay(220);
-                return;
+                    return;
             }
 
             if (pointInside(x, y, mqttTest))
@@ -1158,8 +1175,7 @@ namespace
                 }
 
                 drawPage();
-                delay(220);
-                return;
+                    return;
             }
 
             if (pointInside(x, y, netTest))
@@ -1167,8 +1183,7 @@ namespace
                 setServiceResult(SERVICE_NET_CHECKED);
                 logPrintf("[TFT] SERVICE: network status checked");
                 drawPage();
-                delay(220);
-                return;
+                    return;
             }
         }
 
@@ -1181,8 +1196,7 @@ namespace
                 AtmegaSerial::resetStats();
                 logPrintf("[TFT] UART counters reset");
                 drawPage();
-                delay(200);
-                return;
+                    return;
             }
         }
 
@@ -1196,16 +1210,14 @@ namespace
             {
                 factoryResetConfirm = true;
                 drawPage();
-                delay(200);
-                return;
+                    return;
             }
 
             if (pointInside(x, y, restart))
             {
                 restartConfirm = true;
                 drawPage();
-                delay(200);
-                return;
+                    return;
             }
         }
 
@@ -1264,23 +1276,38 @@ namespace KamodDisplay
         logPrintf("[TFT] ILI9341 initialized");
     }
 
-    void loop()
+void loop()
+{
+    if (!displayOK)
+        return;
+
+    handleTouch();
+
+    // Refresh only dynamic HOME values after network/MQTT state changes.
+    static uint32_t lastHomeRefresh = 0;
+    const uint32_t now = millis();
+    if (currentPage == PAGE_HOME && (now - lastHomeRefresh) >= 1000)
     {
-        if (!displayOK)
-            return;
-
-        handleTouch();
-
-        uint32_t now = millis();
-
-        if (now - lastRefresh < DISPLAY_REFRESH_MS)
-            return;
-
-        lastRefresh = now;
-
-        if (!KamodMqttConfig::editing())
-            drawPage();
+        lastHomeRefresh = now;
+        drawHomeValues();
     }
+
+    // Refresh dynamic HEALTH values without redrawing the whole screen.
+    static uint32_t lastHealthRefresh = 0;
+    if (currentPage == PAGE_HEALTH && (now - lastHealthRefresh) >= 1000)
+    {
+        lastHealthRefresh = now;
+        drawHealthValues();
+    }
+
+    // Keep LOCAL LOG live: when new entries arrive, update the view
+    // and automatically stay at the newest entries.
+    if (currentPage == PAGE_LOG)
+    {
+        if (updateLog())
+            drawLog();
+    }
+}
 }
 
 #endif
